@@ -25,6 +25,11 @@ setup(
         "Natural Language :: English",
     ],
     packages=find_packages(exclude=("tests",)),
+    entry_points={
+        "console_scripts": [
+            "rusttranspiler = rusttranspiler.main:main",
+        ],
+    },
     package_data={"pyVoIP": ["py.typed"]},
     python_requires=">=3.10",
 )
