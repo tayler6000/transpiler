@@ -117,7 +117,8 @@ def kw_names_unknown(
             val = val.replace(replace, _with)
         if val not in istack and val.strip() not in istack:
             raise LexError(
-                f"Unable to find kwarg! {arg=} {val=}\n{pprint.pformat(istack)}"
+                f"Unable to find kwarg! {arg=} {val=}\n"
+                + pprint.pformat(istack)
             )
         if val not in istack:
             val = val.strip()
