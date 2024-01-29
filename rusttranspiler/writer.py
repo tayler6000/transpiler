@@ -17,39 +17,29 @@ def write(tokens: list[Instruction], output: str) -> None:
     with open(output, "w") as file:
         for x in tokens:
             if x.opname == "CALL":
-                # context = x.args["context"]
-                func = x.args["func"]
-                args = x.args["args"]
-                if func == "print":
-                    line = call_print(x)
-                    file.write(line + "\n")
-                    continue
-                line = func + "("
-                argline = ""
-                for arg in args:
-                    argline += f'"{arg}", '
-                line += argline[0:-2] + ");"
+                line = call(x)
             elif x.opname == "RETURN_VALUE":
                 line = f"return {trans(x.args['value'])};"
             elif x.opname == "START_FUNCTION":
-                fn_name = x.args["name"]
-                return_type = TYPE_MAP["None"]
-                line = f"fn {fn_name}("
-                if x.args["args"] is not None:
-                    args = x.args["args"]
-                    i = 0
-                    while i < len(args):
-                        if args[i] == "return":
-                            return_type = trans(args[i + 1])
-                            i += 2
-                            continue
-                        _type = trans(args[i + 1])
-                        line += f"{args[i]}: {_type}"
-                        i += 2
-                line += f") -> {return_type} " + "{"
+                line = start_function(x)
             elif x.opname == "END_SCOPE":
                 line = "}"
             file.write(line + "\n")
+
+
+def call(x: Instruction) -> str:
+    # context = x.args["context"]
+    func = x.args["func"]
+    args = x.args["args"]
+    if func == "print":
+        line = call_print(x)
+        return line
+    line = func + "("
+    argline = ""
+    for arg in args:
+        argline += f'"{arg}", '
+    line += argline[0:-2] + ");"
+    return line
 
 
 def call_print(x: Instruction) -> str:
@@ -57,7 +47,7 @@ def call_print(x: Instruction) -> str:
     args = x.args["args"]
     if func == "print":
         func = "println!"
-    line = func + '('
+    line = func + "("
     if len(args) > 1 or type(args[0]) is not str:
         line += '"' + ("{} " * len(args))[0:-1] + '", '
     argline = ""
@@ -65,6 +55,25 @@ def call_print(x: Instruction) -> str:
         if type(arg) is str:
             argline += f'"{arg}", '
         else:
-            argline += f'{arg}, '
+            argline += f"{arg}, "
     line += argline[0:-2] + ");"
+    return line
+
+
+def start_function(x: Instruction) -> str:
+    fn_name = x.args["name"]
+    return_type = TYPE_MAP["None"]
+    line = f"fn {fn_name}("
+    if x.args["args"] is not None:
+        args = x.args["args"]
+        i = 0
+        while i < len(args):
+            if args[i] == "return":
+                return_type = trans(args[i + 1])
+                i += 2
+                continue
+            _type = trans(args[i + 1])
+            line += f"{args[i]}: {_type}"
+            i += 2
+    line += f") -> {return_type} " + "{"
     return line
