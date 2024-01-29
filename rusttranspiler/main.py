@@ -10,11 +10,13 @@ import subprocess
 import sys
 
 
-def tokenize(file: io.TextIOWrapper) -> dis.Bytecode:
+def tokenize(file: io.TextIOWrapper) -> tuple[list[str], dis.Bytecode]:
     with file:
         data = file.read()
+        file.seek(0, 0)
+        src = file.readlines()
         tokens = dis.Bytecode(data)
-    return tokens
+    return src, tokens
 
 
 def main() -> int:
@@ -34,8 +36,8 @@ def main() -> int:
         )
         return 1
 
-    tokens = tokenize(args.input)
-    lexed = lex(tokens)
+    src, tokens = tokenize(args.input)
+    lexed = lex(src, tokens)
     if args.l:
         pprint.pprint(lexed)
         return 0
