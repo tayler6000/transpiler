@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="RustTranspiler",
-    version="0.2.0",
+    version="0.3.0",
     description="Python to Rust Transpiler",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -27,9 +27,9 @@ setup(
     packages=find_packages(exclude=("tests",)),
     entry_points={
         "console_scripts": [
-            "rusttranspiler = rusttranspiler.main:main",
+            "rusttranspiler = rusttranspiler.main:cli",
         ],
     },
-    package_data={"pyVoIP": ["py.typed"]},
+    package_data={"rusttranspiler": ["py.typed"]},
     python_requires=">=3.10",
 )

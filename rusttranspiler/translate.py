@@ -13,18 +13,19 @@ def trans(_type: str) -> str:
     return TYPE_MAP.get(_type, _type)
 
 
-def write(tokens: list[Instruction], output: str) -> None:
-    with open(output, "w") as file:
-        for x in tokens:
-            if x.opname == "CALL":
-                line = call(x)
-            elif x.opname == "RETURN_VALUE":
-                line = f"return {trans(x.args['value'])};"
-            elif x.opname == "START_FUNCTION":
-                line = start_function(x)
-            elif x.opname == "END_SCOPE":
-                line = "}"
-            file.write(line + "\n")
+def translate(tokens: list[Instruction]) -> str:
+    output = ""
+    for x in tokens:
+        if x.opname == "CALL":
+            line = call(x)
+        elif x.opname == "RETURN_VALUE":
+            line = f"return {trans(x.args['value'])};"
+        elif x.opname == "START_FUNCTION":
+            line = start_function(x)
+        elif x.opname == "END_SCOPE":
+            line = "}"
+        output += line + "\n"
+    return output
 
 
 def call(x: Instruction) -> str:

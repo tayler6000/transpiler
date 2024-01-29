@@ -51,10 +51,24 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
             lexed.append(
                 Instruction(opname="RETURN_VALUE", args={"value": stack.pop()})
             )
+        elif x.opname == "RETURN_CONST":
+            if END_SCOPE is None:
+                continue
+            lexed.append(
+                Instruction(opname="RETURN_VALUE", args={"value": x.argval})
+            )
         else:
             raise LexError(f"Unhandled Bytecode Instruction: {x}")
 
     return lexed
+
+
+ESCAPE_MAP = {
+    "\\\\": "\\",
+    "\\r": "\r",
+    "\\n": "\n",
+    "\\t": "\t",
+}
 
 
 def kw_names(
@@ -64,6 +78,26 @@ def kw_names(
     stack: list[Any],
     lexed: list[Instruction],
 ) -> None:
+    if type(x.argval) is not tuple:
+        return kw_names_unknown(src, x, tokens, stack, lexed)
+    assert type(x.argval) is tuple
+    istack: list[Any] = []
+    kwargs = x.argval
+    for _ in range(len(kwargs)):
+        istack.append(stack.pop())
+    istack.reverse()
+    for arg, val in zip(kwargs, istack):
+        stack.append(Kwarg(key=arg, val=val))
+
+
+def kw_names_unknown(
+    src: list[str],
+    x: dis.Instruction,
+    tokens: list[dis.Instruction],
+    stack: list[Any],
+    lexed: list[Instruction],
+) -> None:
+    global ESCAPE_MAP
     pos = x.positions
     if not pos:
         raise LexError("KW_NAMES Instruction did not have a position!")
@@ -79,9 +113,11 @@ def kw_names(
     for match in matches:
         arg = match[0]
         val = match[1]
+        for replace, _with in ESCAPE_MAP.items():
+            val = val.replace(replace, _with)
         if val not in istack and val.strip() not in istack:
             raise LexError(
-                f"Unable to find kwarg {arg}: {val=}\n{pprint.pformat(istack)}"
+                f"Unable to find kwarg! {arg=} {val=}\n{pprint.pformat(istack)}"
             )
         if val not in istack:
             val = val.strip()
@@ -105,7 +141,7 @@ def load_name(
         and inst1.argval == "__main__"
         and inst2.opname == "COMPARE_OP"
         and inst2.argval == "=="
-        and inst3.opname == "POP_JUMP_FORWARD_IF_FALSE"
+        and inst3.opname in ["POP_JUMP_FORWARD_IF_FALSE", "POP_JUMP_IF_FALSE"]
     ):
         END_SCOPE = inst3.argval
         lexed.append(
