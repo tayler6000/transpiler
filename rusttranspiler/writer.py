@@ -21,7 +21,9 @@ def write(tokens: list[Instruction], output: str) -> None:
                 func = x.args["func"]
                 args = x.args["args"]
                 if func == "print":
-                    func = "println!"
+                    line = call_print(x)
+                    file.write(line + "\n")
+                    continue
                 line = func + "("
                 argline = ""
                 for arg in args:
@@ -48,3 +50,21 @@ def write(tokens: list[Instruction], output: str) -> None:
             elif x.opname == "END_SCOPE":
                 line = "}"
             file.write(line + "\n")
+
+
+def call_print(x: Instruction) -> str:
+    func = x.args["func"]
+    args = x.args["args"]
+    if func == "print":
+        func = "println!"
+    line = func + '('
+    if len(args) > 1 or type(args[0]) is not str:
+        line += '"' + ("{} " * len(args))[0:-1] + '", '
+    argline = ""
+    for arg in args:
+        if type(arg) is str:
+            argline += f'"{arg}", '
+        else:
+            argline += f'{arg}, '
+    line += argline[0:-2] + ");"
+    return line
