@@ -3,9 +3,7 @@ import io
 
 
 def test_hello_world():
-    expected = (
-        'fn main() -> () {\nprintln!("Hello, World!");\nreturn ();\n}\n'
-    )
+    expected = 'fn main() -> () {\nprintln!("Hello, World!");\nreturn ();\n}\n'
     input = io.BytesIO()
     input.write(b'if __name__ == "__main__":\n')
     input.write(b'    print("Hello, World!")\n')
