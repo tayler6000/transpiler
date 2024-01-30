@@ -2,6 +2,7 @@ from rusttranspiler.regex import KW_FIND
 from typing import Any, NamedTuple
 import dis
 import pprint
+import sys
 
 
 class LexError(Exception):
@@ -36,13 +37,15 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
             continue  # NOOP
         elif x.opname == "KW_NAMES":
             kw_names(src, x, tokens, stack, lexed)
+        elif x.opname == "CALL_FUNCTION_KW":
+            call_function_kw(x, tokens, stack, lexed)
         elif x.opname == "LOAD_NAME":
             load_name(x, tokens, stack, lexed)
         elif x.opname == "LOAD_CONST":
             stack.append(x.argval)
         elif x.opname == "PUSH_NULL":
             stack.append(None)
-        elif x.opname == "CALL":
+        elif x.opname in ["CALL", "CALL_FUNCTION"]:
             call(x, tokens, stack, lexed)
         elif x.opname == "RETURN_VALUE":
             if END_SCOPE is None:
@@ -158,6 +161,22 @@ def load_name(
         stack.append(x.argval)
 
 
+def call_function_kw(
+    x: dis.Instruction,
+    tokens: list[dis.Instruction],
+    stack: list[Any],
+    lexed: list[Instruction],
+) -> None:
+    kwargs = stack.pop()
+    istack: list[Any] = []
+    for _ in range(len(kwargs)):
+        istack.append(stack.pop())
+    istack.reverse()
+    for key, val in zip(kwargs, istack):
+        stack.append(Kwarg(key=key, val=val))
+    call(x, tokens, stack, lexed)
+
+
 def call(
     x: dis.Instruction,
     tokens: list[dis.Instruction],
@@ -178,7 +197,10 @@ def call(
         kwargs[argument.key] = argument.val
         arguments.pop(arguments.index(argument))
     stack1 = stack.pop()
-    stack2 = stack.pop()
+    if sys.version_info.major == 3 and sys.version_info.minor == 10:
+        stack2 = None
+    else:
+        stack2 = stack.pop()
     if stack2 is None:
         func = stack1
         _self = None
