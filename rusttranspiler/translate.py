@@ -46,14 +46,14 @@ def call(x: Instruction) -> str:
 def call_print(x: Instruction) -> str:
     func = x.args["func"]
     args = x.args["args"]
-    sep = args["kwargs"].get("sep", " ")
-    end = args["kwargs"].get("end", "\n")
+    sep = x.args["kwargs"].get("sep", " ")
+    end = x.args["kwargs"].get("end", "\n")
     func = "println!"
     if end != "\n":
         func = "print!"
     line = func + "("
-    if len(args) > 1 or type(args[0]) is not str:
-        line += '"' + (("{}"+sep) * len(args))[0:-len(sep)]
+    if len(args) > 1 or type(args[0]) is not str or end != "\n":
+        line += '"' + (("{}" + sep) * len(args))[0 : -len(sep)]
         if end != "\n":
             line += end
         line += '", '
