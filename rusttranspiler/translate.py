@@ -9,6 +9,10 @@ TYPE_MAP = {
 }
 
 
+class TranslationError(Exception):
+    pass
+
+
 def trans(_type: str) -> str:
     return TYPE_MAP.get(_type, _type)
 
@@ -24,6 +28,10 @@ def translate(tokens: list[Instruction]) -> str:
             line = start_function(x)
         elif x.opname == "END_SCOPE":
             line = "}"
+        elif x.opname == "IMPORT_RUST":
+            line = f"use {x.args['import']};"
+        else:
+            raise TranslationError(f"Unknown OP: {x.opname}. ({x})")
         output += line + "\n"
     return output
 
@@ -38,7 +46,10 @@ def call(x: Instruction) -> str:
     line = func + "("
     argline = ""
     for arg in args:
-        argline += f'"{arg}", '
+        if type(arg) is str:
+            argline += f'"{arg}", '
+        else:
+            argline += f"{arg}, "
     line += argline[0:-2] + ");"
     return line
 
@@ -71,7 +82,7 @@ def start_function(x: Instruction) -> str:
     fn_name = x.args["name"]
     return_type = TYPE_MAP["None"]
     line = f"fn {fn_name}("
-    if x.args["args"] is not None:
+    if x.args["args"] != tuple():
         args = x.args["args"]
         i = 0
         while i < len(args):

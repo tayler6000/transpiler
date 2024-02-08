@@ -19,10 +19,13 @@ def tokenize(file: io.TextIOWrapper) -> tuple[list[str], dis.Bytecode]:
     return src, tokens
 
 
-def main(input: io.TextIOWrapper) -> tuple[list[Instruction], str]:
+def main(input: io.TextIOWrapper) -> tuple[list[Instruction], str | Exception]:
     src, tokens = tokenize(input)
     lexed = lex(src, tokens)
-    output = translate(lexed)
+    try:
+        output: str | Exception = translate(lexed)
+    except Exception as e:
+        output = e
     return lexed, output
 
 
@@ -80,6 +83,9 @@ def cli() -> int:
     if args.lex:
         pprint.pprint(lexed)
         return 0
+
+    if issubclass(output.__class__, BaseException):
+        raise Exception("Unable to transpile to Rust!") from output
 
     elif args.stdout:
         print(output, end="", file=sys.stdout)

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from rusttranspiler.regex import KW_FIND
 from typing import Any, NamedTuple
 import dis
@@ -9,7 +10,8 @@ class LexError(Exception):
     pass
 
 
-class Instruction(NamedTuple):
+@dataclass
+class Instruction:
     opname: str
     args: dict[str, Any]
 
@@ -20,10 +22,12 @@ class Kwarg(NamedTuple):
 
 
 END_SCOPE: None | int = None
+FUNC: None | Instruction = None
 
 
 def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
     global END_SCOPE
+    global FUNC
     stack: list[Any] = []
     lexed: list[Instruction] = []
     tokens = list(t)
@@ -33,6 +37,7 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
             if END_SCOPE == x.offset:
                 lexed.append(Instruction(opname="END_SCOPE", args={}))
                 END_SCOPE = None
+                FUNC = None
         if x.opname in ["RESUME", "PRECALL"]:
             continue  # NOOP
         elif x.opname == "KW_NAMES":
@@ -57,6 +62,15 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
         elif x.opname == "RETURN_CONST":
             if END_SCOPE is None:
                 continue
+            if FUNC is not None:
+                if "return" in FUNC.args["args"]:
+                    return_type = FUNC.args["args"][
+                        FUNC.args["args"].index("return") + 1
+                    ]
+                    if return_type == "ExitCode" and x.argval is None:
+                        continue
+                    # TODO: check if return type does not match the return
+                    # statment and error.
             lexed.append(
                 Instruction(opname="RETURN_VALUE", args={"value": x.argval})
             )
@@ -137,6 +151,7 @@ def load_name(
     lexed: list[Instruction],
 ) -> None:
     global END_SCOPE
+    global FUNC
     inst1 = tokens.pop(0)
     inst2 = tokens.pop(0)
     inst3 = tokens.pop(0)
@@ -148,17 +163,35 @@ def load_name(
         and inst3.opname in ["POP_JUMP_FORWARD_IF_FALSE", "POP_JUMP_IF_FALSE"]
     ):
         END_SCOPE = inst3.argval
-        lexed.append(
-            Instruction(
-                opname="START_FUNCTION",
-                args={"name": "main", "args": None},
-            )
+        FUNC = Instruction(
+            opname="START_FUNCTION",
+            args={"name": "main", "args": tuple()},
         )
+        lexed.append(FUNC)
     else:
         tokens.insert(0, inst3)
         tokens.insert(0, inst2)
         tokens.insert(0, inst1)
         stack.append(x.argval)
+        if x.argval == "exit":
+            for instruction in lexed:
+                if (
+                    instruction.opname == "START_FUNCTION"
+                    and instruction.args["name"] == "main"
+                ):
+                    args = instruction.args["args"]
+                    if "return" not in args:
+                        instruction.args["args"] = args + (
+                            "return",
+                            "ExitCode",
+                        )
+            lexed.insert(
+                0,
+                Instruction(
+                    opname="IMPORT_RUST",
+                    args={"import": "std::process::ExitCode"},
+                ),
+            )
 
 
 def call_function_kw(
@@ -208,6 +241,14 @@ def call(
         func = stack2
         _self = stack1
     inst1 = tokens.pop(0)
+    if func == "exit":
+        lexed.append(
+            Instruction(
+                opname="RETURN_VALUE",
+                args={"value": f"ExitCode::from({arguments[0]})"},
+            )
+        )
+        return
     if inst1.opname == "POP_TOP":
         lexed.append(
             Instruction(
