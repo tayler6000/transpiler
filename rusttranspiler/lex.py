@@ -44,6 +44,9 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
         elif x.opname == "LOAD_NAME":
             load_name(x, tokens, stack, lexed)
         elif x.opname == "LOAD_CONST":
+            if type(x.argval) is str:
+                stack.append(repr(x.argval).strip("'"))
+                continue
             stack.append(x.argval)
         elif x.opname == "PUSH_NULL":
             stack.append(None)

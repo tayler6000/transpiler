@@ -19,3 +19,13 @@ def test_hello_world_kw():
         lex, output = main(input)
 
     assert output == expected
+
+
+def test_exit():
+    with open(join("tests", "files", "exit.rs"), "r") as f:
+        expected = f.read()
+
+    with open(join("tests", "files", "exit.py"), "r") as input:
+        lex, output = main(input)
+
+    assert output == expected
