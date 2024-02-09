@@ -35,57 +35,54 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
                 lexed.append(Instruction(opname="END_SCOPE", args={}))
                 END_SCOPE = None
                 FUNC = None
-        if x.opname in ["RESUME", "PRECALL"]:
-            continue  # NOOP
-        elif x.opname == "KW_NAMES":
-            kw_names(src, x, tokens, stack, lexed)
-        elif x.opname == "CALL_FUNCTION_KW":
-            call_function_kw(x, tokens, stack, lexed)
-        elif x.opname == "LOAD_NAME":
-            load_name(x, tokens, stack, lexed)
-        elif x.opname == "LOAD_CONST":
-            if type(x.argval) is str:
-                stack.append(repr(x.argval).strip("'"))
-                continue
-            stack.append(x.argval)
-        elif x.opname == "PUSH_NULL":
-            stack.append(None)
-        elif x.opname in ["CALL", "CALL_FUNCTION"]:
-            call(x, tokens, stack, lexed)
-        elif x.opname == "RETURN_VALUE":
-            if END_SCOPE is None:
-                stack.pop()
-                continue
-            lexed.append(
-                Instruction(opname="RETURN_VALUE", args={"value": stack.pop()})
-            )
-        elif x.opname == "RETURN_CONST":
-            if END_SCOPE is None:
-                continue
-            if FUNC is not None:
-                if "return" in FUNC.args["args"]:
-                    return_type = FUNC.args["args"][
-                        FUNC.args["args"].index("return") + 1
-                    ]
-                    if return_type == "ExitCode" and x.argval is None:
-                        continue
-                    # TODO: check if return type does not match the return
-                    # statment and error.
-            lexed.append(
-                Instruction(opname="RETURN_VALUE", args={"value": x.argval})
-            )
-        else:
-            raise LexError(f"Unhandled Bytecode Instruction: {x}")
+        match x.opname:
+            case "RESUME":
+                continue  # NOOP
+            case "KW_NAMES":
+                kw_names(src, x, tokens, stack, lexed)
+            case "CALL_FUNCTION_KW":
+                call_function_kw(x, tokens, stack, lexed)
+            case "LOAD_NAME":
+                load_name(x, tokens, stack, lexed)
+            case "LOAD_CONST":
+                if type(x.argval) is str:
+                    stack.append(repr(x.argval).strip("'"))
+                    continue
+                stack.append(x.argval)
+            case "PUSH_NULL":
+                stack.append(None)
+            case "CALL":
+                call(x, tokens, stack, lexed)
+            case "RETURN_VALUE":
+                if END_SCOPE is None:
+                    stack.pop()
+                    continue
+                lexed.append(
+                    Instruction(
+                        opname="RETURN_VALUE", args={"value": stack.pop()}
+                    )
+                )
+            case "RETURN_CONST":
+                if END_SCOPE is None:
+                    continue
+                if FUNC is not None:
+                    if "return" in FUNC.args["args"]:
+                        return_type = FUNC.args["args"][
+                            FUNC.args["args"].index("return") + 1
+                        ]
+                        if return_type == "ExitCode" and x.argval is None:
+                            continue
+                        # TODO: check if return type does not match the return
+                        # statment and error.
+                lexed.append(
+                    Instruction(
+                        opname="RETURN_VALUE", args={"value": x.argval}
+                    )
+                )
+            case _:
+                raise LexError(f"Unhandled Bytecode Instruction: {x}")
 
     return lexed
-
-
-ESCAPE_MAP = {
-    "\\\\": "\\",
-    "\\r": "\r",
-    "\\n": "\n",
-    "\\t": "\t",
-}
 
 
 def kw_names(
