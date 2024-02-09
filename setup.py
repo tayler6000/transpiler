@@ -31,5 +31,5 @@ setup(
         ],
     },
     package_data={"rusttranspiler": ["py.typed"]},
-    python_requires="==3.12",
+    python_requires="~=3.12.0",
 )
