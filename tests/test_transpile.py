@@ -1,30 +1,21 @@
 from rusttranspiler.main import main
-import io
+from os.path import join
 
 
 def test_hello_world():
-    expected = 'fn main() -> () {\nprintln!("Hello, World!");\nreturn ();\n}\n'
-    input = io.BytesIO()
-    input.write(b'if __name__ == "__main__":\n')
-    input.write(b'    print("Hello, World!")\n')
-    input.seek(0, 0)
+    with open(join("tests", "files", "hello_world.rs"), "r") as f:
+        expected = f.read()
 
-    lex, output = main(io.TextIOWrapper(input))
+    with open(join("tests", "files", "hello_world.py"), "r") as input:
+        lex, output = main(input)
     assert output == expected
 
 
 def test_hello_world_kw():
-    expected = (
-        'fn main() -> () {\nprint!("{}*{}*{}?", "Hello, World!", '
-        + '"Hello, Rust!", 8);\nprint!("{}!", 42);\nprint!("{}!",'
-        + ' "Our transpiler now works");\nreturn ();\n}\n'
-    )
-    input = io.BytesIO()
-    input.write(b'if __name__ == "__main__":\n    print("Hello, World!", ')
-    input.write(b'"Hello, Rust!", 8, sep="*", end="?")\n    ')
-    input.write(b'print(42, end="!")\n')
-    input.write(b'    print("Our transpiler now works", end="!")\n')
-    input.seek(0, 0)
+    with open(join("tests", "files", "hello_world_kw.rs"), "r") as f:
+        expected = f.read()
 
-    lex, output = main(io.TextIOWrapper(input))
+    with open(join("tests", "files", "hello_world_kw.py"), "r") as input:
+        lex, output = main(input)
+
     assert output == expected
