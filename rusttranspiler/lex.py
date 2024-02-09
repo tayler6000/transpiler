@@ -1,9 +1,6 @@
 from dataclasses import dataclass
-from rusttranspiler.regex import KW_FIND
 from typing import Any, NamedTuple
 import dis
-import pprint
-import sys
 
 
 class LexError(Exception):
@@ -95,8 +92,6 @@ def kw_names(
     stack: list[Any],
     lexed: list[Instruction],
 ) -> None:
-    if type(x.argval) is not tuple:
-        return kw_names_unknown(src, x, tokens, stack, lexed)
     assert type(x.argval) is tuple
     istack: list[Any] = []
     kwargs = x.argval
@@ -105,43 +100,6 @@ def kw_names(
     istack.reverse()
     for arg, val in zip(kwargs, istack):
         stack.append(Kwarg(key=arg, val=val))
-
-
-def kw_names_unknown(
-    src: list[str],
-    x: dis.Instruction,
-    tokens: list[dis.Instruction],
-    stack: list[Any],
-    lexed: list[Instruction],
-) -> None:
-    global ESCAPE_MAP
-    pos = x.positions
-    if not pos:
-        raise LexError("KW_NAMES Instruction did not have a position!")
-    if not pos.lineno:
-        raise LexError("KW_NAMES Instruction did not have a line number!")
-    code = src[pos.lineno - 1][pos.col_offset : pos.end_col_offset]
-    matches = KW_FIND.findall(code)
-    if not matches:
-        raise LexError(f"Unable to find kwargs in line of code {code=}")
-    istack: list[Any] = []
-    for _ in range(len(matches)):
-        istack.append(stack.pop())
-    for match in matches:
-        arg = match[0]
-        val = match[1]
-        for replace, _with in ESCAPE_MAP.items():
-            val = val.replace(replace, _with)
-        if val not in istack and val.strip() not in istack:
-            raise LexError(
-                f"Unable to find kwarg! {arg=} {val=}\n"
-                + pprint.pformat(istack)
-            )
-        if val not in istack:
-            val = val.strip()
-        stack.append(Kwarg(key=arg, val=val))
-        istack.pop(istack.index(val))
-    assert len(istack) == 0
 
 
 def load_name(
@@ -160,7 +118,7 @@ def load_name(
         and inst1.argval == "__main__"
         and inst2.opname == "COMPARE_OP"
         and inst2.argval == "=="
-        and inst3.opname in ["POP_JUMP_FORWARD_IF_FALSE", "POP_JUMP_IF_FALSE"]
+        and inst3.opname == "POP_JUMP_IF_FALSE"
     ):
         END_SCOPE = inst3.argval
         FUNC = Instruction(
@@ -230,10 +188,7 @@ def call(
         kwargs[argument.key] = argument.val
         arguments.pop(arguments.index(argument))
     stack1 = stack.pop()
-    if sys.version_info.major == 3 and sys.version_info.minor == 10:
-        stack2 = None
-    else:
-        stack2 = stack.pop()
+    stack2 = stack.pop()
     if stack2 is None:
         func = stack1
         _self = None
