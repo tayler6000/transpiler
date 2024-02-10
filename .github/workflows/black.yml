@@ -3,7 +3,7 @@ name: Check Black
 on:
   push:
     branches:
-      - '**'
+      - 'main'
   pull_request:
 
 jobs:
