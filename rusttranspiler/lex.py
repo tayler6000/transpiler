@@ -18,8 +18,13 @@ class Kwarg(NamedTuple):
     val: Any
 
 
+class StdLib(NamedTuple):
+    lib: str
+
+
 END_SCOPE: None | int = None
 FUNC: None | Instruction = None
+NAMES: dict[str, Any] = {}
 
 
 def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
@@ -44,6 +49,8 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
                 call_function_kw(x, tokens, stack, lexed)
             case "LOAD_NAME":
                 load_name(x, tokens, stack, lexed)
+            case "IMPORT_NAME":
+                import_name(x, tokens, stack, lexed)
             case "LOAD_CONST":
                 if type(x.argval) is str:
                     stack.append(repr(x.argval).strip("'"))
@@ -114,7 +121,8 @@ def load_name(
     inst2 = tokens.pop(0)
     inst3 = tokens.pop(0)
     if (
-        inst1.opname == "LOAD_CONST"
+        x.argval == "__name__"
+        and inst1.opname == "LOAD_CONST"
         and inst1.argval == "__main__"
         and inst2.opname == "COMPARE_OP"
         and inst2.argval == "=="
@@ -131,6 +139,16 @@ def load_name(
         tokens.insert(0, inst2)
         tokens.insert(0, inst1)
         stack.append(x.argval)
+        global NAMES
+        if NAMES.get(x.argval) == StdLib("sys"):
+            inst = tokens.pop(0)
+            if inst.opname == "LOAD_ATTR":
+                if inst.argval == "exit":
+                    x = inst
+                    stack.pop()
+                    stack.append(inst.argval)
+                else:
+                    tokens.insert(0, inst)
         if x.argval == "exit":
             for instruction in lexed:
                 if (
@@ -150,6 +168,27 @@ def load_name(
                     args={"import": "std::process::ExitCode"},
                 ),
             )
+
+
+def import_name(
+    x: dis.Instruction,
+    tokens: list[dis.Instruction],
+    stack: list[Any],
+    lexed: list[Instruction],
+) -> None:
+    SUPPORTED_STDLIB = {"sys"}
+    stack.pop()  # fromlist
+    level = stack.pop()
+    if level != 0:
+        raise LexError("Relative imports not supported, yet")
+    if x.argval not in SUPPORTED_STDLIB:
+        raise LexError(f"Not able to import from {x.argval}, yet")
+    inst = tokens.pop(0)
+    if not inst.opname == "STORE_NAME":
+        stack.append(StdLib(x.argval))
+        return
+    global NAMES
+    NAMES[inst.argval] = StdLib(x.argval)
 
 
 def call_function_kw(
