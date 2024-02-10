@@ -29,3 +29,23 @@ def test_exit():
         lex, output = main(input)
 
     assert output == expected
+
+
+def test_import():
+    with open(join("tests", "files", "import.rs"), "r") as f:
+        expected = f.read()
+
+    with open(join("tests", "files", "import.py"), "r") as input:
+        lex, output = main(input)
+
+    assert output == expected
+
+
+def test_import_as():
+    with open(join("tests", "files", "import.rs"), "r") as f:
+        expected = f.read()
+
+    with open(join("tests", "files", "import_as.py"), "r") as input:
+        lex, output = main(input)
+
+    assert output == expected
