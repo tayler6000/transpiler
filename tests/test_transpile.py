@@ -49,3 +49,13 @@ def test_import_as():
         lex, output = main(input)
 
     assert output == expected
+
+
+def test_input():
+    with open(join("tests", "files", "input.rs"), "r") as f:
+        expected = f.read()
+
+    with open(join("tests", "files", "input.py"), "r") as input:
+        lex, output = main(input)
+
+    assert output == expected

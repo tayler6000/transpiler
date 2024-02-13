@@ -21,18 +21,22 @@ def translate(tokens: list[Instruction]) -> str:
     output = ""
     for x in tokens:
         if x.opname == "CALL":
-            line = call(x)
+            line = call(x) + "\n"
         elif x.opname == "RETURN_VALUE":
-            line = f"return {trans(x.args['value'])};"
+            line = f"return {trans(x.args['value'])};\n"
         elif x.opname == "START_FUNCTION":
-            line = start_function(x)
+            line = start_function(x) + "\n"
         elif x.opname == "END_SCOPE":
-            line = "}"
+            line = "}\n"
+        elif x.opname == "IMPORT_CRATE":
+            line = f"extern crate {x.args['import']};\n"
         elif x.opname == "IMPORT_RUST":
-            line = f"use {x.args['import']};"
+            line = f"use {x.args['import']};\n"
+        elif x.opname == "STORE":
+            line = f"let {x.args['var']} = "
         else:
             raise TranslationError(f"Unknown OP: {x.opname}. ({x})")
-        output += line + "\n"
+        output += line
     return output
 
 
