@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="RustTranspiler",
-    version="0.7.1",
+    version="0.8.0",
     description="Python to Rust Transpiler",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -30,6 +30,6 @@ setup(
             "rusttranspiler = rusttranspiler.main:cli",
         ],
     },
-    package_data={"rusttranspiler": ["py.typed"]},
+    package_data={"rusttranspiler": ["py.typed", "python_stdlib/**/*"]},
     python_requires="~=3.12.0",
 )

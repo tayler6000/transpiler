@@ -1,11 +1,12 @@
 from rusttranspiler.lex import lex, Instruction
 from rusttranspiler.translate import translate
-from os.path import exists, join
+from os.path import exists, join, dirname
 import argparse
 import dis
 import io
 import os
 import pprint
+import shutil
 import subprocess
 import sys
 
@@ -110,6 +111,12 @@ def cli() -> int:
         )
         with open(join(args.output, "src", "main.rs"), "w") as f:
             f.write(output)
+        dir = dirname(__file__)
+        shutil.copytree(
+            join(dir, "python_stdlib"), join(args.output, "python_stdlib")
+        )
+        with open(join(args.output, "Cargo.toml"), "a") as f:
+            f.write('python_stdlib = {path = "python_stdlib"}')
         cwd = os.getcwd()
         os.chdir(args.output)
         subprocess.run(["cargo-fmt"])

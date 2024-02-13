@@ -13,6 +13,13 @@ class Instruction:
     args: dict[str, Any]
 
 
+class Name(NamedTuple):
+    value: str
+
+    def __repr__(self) -> str:
+        return self.value
+
+
 class Kwarg(NamedTuple):
     key: str
     val: Any
@@ -31,7 +38,12 @@ def lex(src: list[str], t: dis.Bytecode) -> list[Instruction]:
     global END_SCOPE
     global FUNC
     stack: list[Any] = []
-    lexed: list[Instruction] = []
+    lexed: list[Instruction] = [
+        Instruction(
+            opname="IMPORT_CRATE",
+            args={"import": "python_stdlib"},
+        ),
+    ]
     tokens = list(t)
     while len(tokens) >= 1:
         x = tokens.pop(0)
@@ -138,7 +150,7 @@ def load_name(
         tokens.insert(0, inst3)
         tokens.insert(0, inst2)
         tokens.insert(0, inst1)
-        stack.append(x.argval)
+        stack.append(Name(x.argval))
         global NAMES
         if NAMES.get(x.argval) == StdLib("sys"):
             inst = tokens.pop(0)
@@ -146,7 +158,7 @@ def load_name(
                 if inst.argval == "exit":
                     x = inst
                     stack.pop()
-                    stack.append(inst.argval)
+                    stack.append(Name(inst.argval))
                 else:
                     tokens.insert(0, inst)
         if x.argval == "exit":
@@ -162,10 +174,17 @@ def load_name(
                             "ExitCode",
                         )
             lexed.insert(
-                0,
+                1,
                 Instruction(
                     opname="IMPORT_RUST",
                     args={"import": "std::process::ExitCode"},
+                ),
+            )
+            lexed.insert(
+                1,
+                Instruction(
+                    opname="IMPORT_RUST",
+                    args={"import": "python_stdlib::builtin::exit"},
                 ),
             )
 
@@ -229,21 +248,29 @@ def call(
     stack1 = stack.pop()
     stack2 = stack.pop()
     if stack2 is None:
-        func = stack1
+        func = stack1.value
         _self = None
     else:
-        func = stack2
+        func = stack2.value
         _self = stack1
     inst1 = tokens.pop(0)
-    if func == "exit":
-        exit_code = arguments[0] if arguments else 0
-        lexed.append(
-            Instruction(
-                opname="RETURN_VALUE",
-                args={"value": f"ExitCode::from({exit_code})"}
+    match func:
+        case "exit":
+            exit_code = arguments[0] if arguments else 0
+            lexed.append(
+                Instruction(
+                    opname="RETURN_VALUE", args={"value": f"exit({exit_code})"}
+                )
             )
-        )
-        return
+            return
+        case "input":
+            lexed.insert(
+                1,
+                Instruction(
+                    opname="IMPORT_RUST",
+                    args={"import": "python_stdlib::builtin::input"},
+                ),
+            )
     if inst1.opname == "POP_TOP":
         lexed.append(
             Instruction(
