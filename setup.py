@@ -7,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="RustTranspiler",
-    version="0.7.0",
+    version="0.7.1",
     description="Python to Rust Transpiler",
     long_description=long_description,
     long_description_content_type="text/markdown",

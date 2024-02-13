@@ -236,10 +236,11 @@ def call(
         _self = stack1
     inst1 = tokens.pop(0)
     if func == "exit":
+        exit_code = arguments[0] if arguments else 0
         lexed.append(
             Instruction(
                 opname="RETURN_VALUE",
-                args={"value": f"ExitCode::from({arguments[0]})"},
+                args={"value": f"ExitCode::from({exit_code})"}
             )
         )
         return
